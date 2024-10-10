@@ -1,11 +1,11 @@
 resource "github_actions_variable" "github" {
   for_each = {
-    "ARM_TENANT_ID"                                = var.tenant_id,
+    "ARM_TENANT_ID"                                = data.azurerm_subscription.terraform.tenant_id,
     "ARM_SUBSCRIPTION_ID"                          = var.subscription_id,
-    "ARM_CLIENT_ID"                                = var.client_id,
-    "BACKEND_AZURE_RESOURCE_GROUP_NAME"            = var.resource_group_name,
-    "BACKEND_AZURE_STORAGE_ACCOUNT_NAME"           = var.storage_account_name,
-    "BACKEND_AZURE_STORAGE_ACCOUNT_CONTAINER_NAME" = var.storage_container_name
+    "ARM_CLIENT_ID"                                = azurerm_user_assigned_identity.terraform.client_id,
+    "BACKEND_AZURE_RESOURCE_GROUP_NAME"            = azurerm_resource_group.terraform.name,
+    "BACKEND_AZURE_STORAGE_ACCOUNT_NAME"           = azurerm_storage_account.terraform.name,
+    "BACKEND_AZURE_STORAGE_ACCOUNT_CONTAINER_NAME" = azurerm_storage_container.terraform.name
   }
 
   repository    = var.github_repo_name
@@ -15,8 +15,8 @@ resource "github_actions_variable" "github" {
 
 resource "azurerm_federated_identity_credential" "github" {
   name                = replace(var.github_repo_name, "-", "_")
-  resource_group_name = var.resource_group_name
-  parent_id           = var.managed_identity_id
+  resource_group_name = azurerm_user_assigned_identity.terraform.resource_group_name
+  parent_id           = azurerm_user_assigned_identity.terraform.id
 
   audience = ["api://AzureADTokenExchange"]
   issuer   = "https://token.actions.githubusercontent.com"
