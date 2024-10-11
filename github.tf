@@ -23,37 +23,40 @@ resource "azurerm_federated_identity_credential" "github" {
   subject  = "repo:${var.github_owner_name}/${var.github_repo_name}:ref:refs/heads/main"
 }
 
-//Github Repository Files
+// Optional pipeline file in the repository
 
-/*
-Needs testing - this is a placeholder for creating a GitHub Actions pipeline
 resource "github_repository_file" "pipeline" {
-  for_each            = local.github && var.github_create_pipeline ? ["terraform.yml"] : []
+  for_each            = toset(var.github_create_pipeline ? ["terraform.yml"] : [])
   repository          = var.github_repo_name
   branch              = "main"
-  file                = ".gihub/workflows/terraform.yml"
+  file                = ".github/workflows/terraform.yml"
   overwrite_on_create = false
 
-  content = file("${path.module}/templates/github_pipeline.tftpl")
+  content = templatefile("${path.module}/workflows/terraform.ymltpl", {
+    runner_name                                  = "ubuntu-latest",
+    backend_azure_storage_account_container_name = azurerm_storage_container.terraform.name
+  })
 }
-*/
 
-/*
-// Placeholder - create tfvars and perhaps a default set of Terraform files in the repository
-resource "github_repository_file" "tfvars" {
-  for_each            = local.github && var.github_create_pipeline ? ["terraform.yml"] : []
+// Optional set of Terraform files in the repository - shame there is no equivalent of template_dir
+
+resource "github_repository_file" "terraform" {
+  for_each = var.github_create_files ? {
+    "main.tf" : {
+      source = "files/main.tftpl"
+      vars   = { subscription_id = var.subscription_id }
+    },
+    "provider.tf" : {
+      source = "files/provider.tftpl"
+      vars   = {}
+    },
+
+  } : {}
+
   repository          = var.github_repo_name
   branch              = "main"
-  file                = "terraform/bootstrap.auto.tfvars"
-  overwrite_on_create = true
+  file                = each.key
+  overwrite_on_create = false
 
-  content = <<-EOF
-  subscription_id               = "${var.subscription_id}"
-  resource_group_name           = "${azurerm_resource_group.terraform.name}"
-  storage_account_name          = "${azurerm_storage_account.terraform.name}"
-  location                      = "${var.location}"
-
-  tags = ${jsonencode(var.tags != null ? var.tags : {})}
-  EOF
+  content = templatefile("${path.module}/${each.value.source}", each.value.vars)
 }
-*/

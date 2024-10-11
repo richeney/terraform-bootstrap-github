@@ -80,5 +80,11 @@ variable "github_personal_access_token" {
 variable "github_create_pipeline" {
   description = "Create a pipeline in GitHub."
   type        = bool
-  default     = false
+  default     = true
+}
+
+variable "github_create_files" {
+  description = "Create a set of Terraform files in GitHub."
+  type        = bool
+  default     = true
 }
