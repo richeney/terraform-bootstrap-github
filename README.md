@@ -4,8 +4,6 @@ Example bootstrap for both Azure DevOps and GitHub Actions using federated workl
 
 ## Create a new repo
 
-I find I use one of two workflows. I either create a new repo in GitHub, clone it down and then start working, or I create one locally and then push it up. I'll cover the former here, and then add the second as an option at the bottom of this readme.
-
 1. Go to <https://github.com>
 1. Click on **+, New repository**
 1. Enter repo name and description
@@ -41,13 +39,15 @@ subscription_id = "abcdef01-2345-6789-abcd-314159265359"
 github_owner_name            = "richeney"
 github_repo_name             = "terraform-bootstrap-github-test"
 github_personal_access_token = "paste_your_github_token_here"
+github_create_workflows      = true
+github_create_files          = true
 ```
 
-Note that you can also use organization names as the value for github_owner_name.
+Note that you can also use an organization name as the value for github_owner_name. Additional variables may be found in variables.tf.
 
-Additional variables may be found in variables.tf.
+## Bootstrap
 
-## Run terraform
+Run the bootstrap in your shell.
 
 1. Initialise
 
@@ -60,3 +60,15 @@ Additional variables may be found in variables.tf.
     ```shell
     terraform apply
     ```
+
+This will create the resources. The bootstrap is a one off and therefore the local terraform.tfstate state file is not intended to be preserved for lifecycle management.
+
+## Post bootstrap
+
+Follow the link in the outputs to see the resource group with the newly created Azure resources. Check the identity's RBAC assignments and federated credential.
+
+Follow the link in the outputs to check the repo's GitHub Actions variables and workflows.
+
+You can now use the provided plan and apply workflows in GitHub Actions. The workflows will store their tfstate remotely in the storage account. Both workflows have an optional destroy option.
+
+If you wish to remove the bootstrapped resources then you can run terraform destroy in your shell if you still have your local terraform.tfstate. Alternatively you can delete the resource group manually, and then clean up the repo by removing any of the files, workflows, and GitHub Actions variables.

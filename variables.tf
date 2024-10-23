@@ -77,8 +77,8 @@ variable "github_personal_access_token" {
   }
 }
 
-variable "github_create_pipeline" {
-  description = "Create a pipeline in GitHub."
+variable "github_create_workflows" {
+  description = "Create example workflows in GitHub."
   type        = bool
   default     = true
 }
@@ -86,5 +86,5 @@ variable "github_create_pipeline" {
 variable "github_create_files" {
   description = "Create a set of Terraform files in GitHub."
   type        = bool
-  default     = true
+  default     = false
 }

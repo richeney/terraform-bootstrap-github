@@ -1,3 +1,18 @@
+locals {
+  workflow_templates = toset(var.github_create_workflows ? fileset("${path.module}/workflows", "*.ymltpl") : [])
+  workflows          = toset([for template in local.workflow_templates : trimsuffix(template, "tpl")])
+  workflow_template_vars = {
+    runner_name                                  = "ubuntu-latest",
+    backend_azure_storage_account_container_name = azurerm_storage_container.terraform.name
+  }
+
+  file_templates = toset(var.github_create_files ? fileset("${path.module}/files", "*.tftpl") : [])
+  files          = toset([for template in local.file_templates : trimsuffix(template, "tpl")])
+  file_template_vars = {
+    subscription_id = var.subscription_id
+  }
+}
+
 resource "github_actions_variable" "github" {
   for_each = {
     "ARM_TENANT_ID"                                = data.azurerm_subscription.terraform.tenant_id,
@@ -23,40 +38,27 @@ resource "azurerm_federated_identity_credential" "github" {
   subject  = "repo:${var.github_owner_name}/${var.github_repo_name}:ref:refs/heads/main"
 }
 
-// Optional pipeline file in the repository
+// Optional example workflows in the repository
 
-resource "github_repository_file" "pipeline" {
-  for_each            = toset(var.github_create_pipeline ? ["terraform.yml"] : [])
+resource "github_repository_file" "workflow" {
+  for_each            = local.workflow_templates
   repository          = var.github_repo_name
   branch              = "main"
-  file                = ".github/workflows/terraform.yml"
+  file                = ".github/workflows/${trimsuffix(each.value, "tpl")}"
   overwrite_on_create = false
 
-  content = templatefile("${path.module}/workflows/terraform.ymltpl", {
-    runner_name                                  = "ubuntu-latest",
-    backend_azure_storage_account_container_name = azurerm_storage_container.terraform.name
-  })
+  content = templatefile("${path.module}/workflows/${each.value}", local.workflow_template_vars)
 }
 
-// Optional set of Terraform files in the repository - shame there is no equivalent of template_dir
+// Optional set of Terraform files in the repository
 
 resource "github_repository_file" "terraform" {
-  for_each = var.github_create_files ? {
-    "main.tf" : {
-      source = "files/main.tftpl"
-      vars   = { subscription_id = var.subscription_id }
-    },
-    "provider.tf" : {
-      source = "files/provider.tftpl"
-      vars   = {}
-    },
-
-  } : {}
+  for_each = local.file_templates
 
   repository          = var.github_repo_name
   branch              = "main"
-  file                = each.key
+  file                = trimsuffix(each.value, "tpl")
   overwrite_on_create = false
 
-  content = templatefile("${path.module}/${each.value.source}", each.value.vars)
+  content = templatefile("${path.module}/files/${each.value}", local.file_template_vars)
 }
